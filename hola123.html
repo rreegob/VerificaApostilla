@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Buenos Días! - Experiencia Interactiva</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        serif: ['"Playfair Display"', 'serif'],
+                    },
+                    animation: {
+                        'spin-slow': 'spin 20s linear infinite',
+                        'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
+                        'float': 'float 4s ease-in-out infinite',
+                        'shimmer': 'shimmer 2.5s infinite',
+                    },
+                    keyframes: {
+                        pulseGlow: {
+                            '0%, 100%': { opacity: 0.8, transform: 'scale(1)' },
+                            '50%': { opacity: 1, transform: 'scale(1.05)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .dark .glass-panel {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Gradient Transitions */
+        .theme-morning {
+            background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 40%, #FFECD2 100%);
+            color: #4A154B;
+        }
+        .theme-noon {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #fff1eb 100%);
+            color: #0c4a6e;
+        }
+        .theme-night {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            color: #f8fafc;
+        }
+        /* Custom rays animation */
+        @keyframes rotateRays {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .sun-rays {
+            animation: rotateRays 35s linear infinite;
+        }
+    </style>
+</head>
+<body class="h-full transition-colors duration-1000 ease-in-out font-sans antialiased overflow-x-hidden theme-morning flex flex-col justify-between" id="app-body">
+
+    <canvas id="particle-canvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+    <header class="relative z-10 w-full max-w-6xl mx-auto px-6 pt-6 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div id="status-icon" class="w-10 h-10 rounded-full flex items-center justify-center bg-white/30 backdrop-blur-md shadow-sm text-amber-600 text-xl transition-all duration-500">
+                <i class="fa-solid fa-sun"></i>
+            </div>
+            <span class="font-bold tracking-tight text-lg opacity-90">Amanecer Radiante</span>
+        </div>
+
+        <!-- Clock Widget -->
+        <div class="glass-panel px-5 py-2 rounded-full shadow-lg flex items-center gap-3">
+            <i class="fa-regular fa-clock text-amber-500"></i>
+            <span id="digital-clock" class="font-mono text-xl font-bold tracking-wider">00:00:00</span>
+            <span id="ampm" class="text-xs font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-500/20">AM</span>
+        </div>
+    </header>
+
+    <main class="relative z-10 w-full max-w-4xl mx-auto px-6 py-8 flex flex-col items-center text-center my-auto">
+        
+        <!-- Sun Graphic Visual -->
+        <div class="relative mb-6 group cursor-pointer" id="sun-graphic" onclick="triggerSunClick(event)">
+            <!-- Sun Glow -->
+            <div id="sun-glow" class="absolute -inset-4 rounded-full bg-gradient-to-r from-amber-400 to-rose-400 blur-2xl opacity-70 animate-pulse-glow transition-all duration-700"></div>
+            
+            <!-- Sun Rays SVG -->
+            <svg id="sun-rays-svg" class="sun-rays absolute -inset-8 w-[calc(100%+4rem)] h-[calc(100%+4rem)] opacity-40 text-amber-400 transition-opacity duration-700" viewBox="0 0 100 100">
+                <g fill="currentColor">
+                    <rect x="48" y="2" width="4" height="12" rx="2" />
+                    <rect x="48" y="86" width="4" height="12" rx="2" />
+                    <rect x="2" y="48" width="12" height="4" rx="2" />
+                    <rect x="86" y="48" width="12" height="4" rx="2" />
+                    <rect x="14" y="14" width="4" height="12" rx="2" transform="rotate(-45 16 20)" />
+                    <rect x="82" y="82" width="4" height="12" rx="2" transform="rotate(-45 84 88)" />
+                    <rect x="14" y="82" width="4" height="12" rx="2" transform="rotate(45 16 88)" />
+                    <rect x="82" y="14" width="4" height="12" rx="2" transform="rotate(45 84 20)" />
+                </g>
+            </svg>
+
+            <!-- Main Orb -->
+            <div id="main-orb" class="relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-tr from-amber-300 via-orange-400 to-amber-100 shadow-2xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-500">
+                <i id="orb-icon" class="fa-solid fa-sun text-5xl md:text-6xl text-white drop-shadow-md"></i>
+            </div>
+        </div>
+
+        <!-- Greeting Headline -->
+        <div class="space-y-3 mb-8">
+            <p id="sub-greeting" class="text-sm md:text-base font-semibold tracking-widest uppercase opacity-80 transition-all duration-500">
+                Que tengas un día maravilloso
+            </p>
+            <h1 id="main-greeting" class="font-serif text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight drop-shadow-sm transition-all duration-700">
+                ¡Buenos Días!
+            </h1>
+            <p id="date-display" class="text-base md:text-lg opacity-75 font-medium"></p>
+        </div>
+
+        <!-- Quote Card -->
+        <div class="w-full max-w-xl glass-panel p-6 md:p-8 rounded-3xl shadow-xl transition-all duration-500 hover:shadow-2xl relative overflow-hidden group mb-10">
+            <div class="absolute -right-4 -bottom-4 opacity-10 text-8xl font-serif">“</div>
+            <p id="quote-text" class="font-serif text-lg md:text-xl italic mb-3 relative z-10 transition-all duration-300">
+                "Cada mañana nacemos de nuevo. Lo que hacemos hoy es lo que más importa."
+            </p>
+            <span id="quote-author" class="block text-xs md:text-sm font-semibold tracking-wider uppercase opacity-70">
+                — Buda
+            </span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-center gap-3 md:gap-4 w-full max-w-2xl">
+            <!-- Phrase Generator Button -->
+            <button onclick="generateNewQuote()" class="glass-panel hover:bg-white/40 dark:hover:bg-slate-800/60 px-5 py-3 rounded-2xl font-semibold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2 group">
+                <i class="fa-solid fa-sparkles text-amber-500 group-hover:rotate-12 transition-transform"></i>
+                <span>Nueva Frase</span>
+            </button>
+
+            <!-- Sound Toggle Button -->
+            <button id="sound-btn" onclick="toggleAudio()" class="glass-panel hover:bg-white/40 dark:hover:bg-slate-800/60 px-5 py-3 rounded-2xl font-semibold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2">
+                <i id="sound-icon" class="fa-solid fa-volume-xmark text-rose-500"></i>
+                <span id="sound-text">Sonido de la Mañana</span>
+            </button>
+
+            <!-- Confetti Energy Boost Button -->
+            <button onclick="triggerConfetti()" class="glass-panel hover:bg-white/40 dark:hover:bg-slate-800/60 px-5 py-3 rounded-2xl font-semibold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-yellow-500"></i>
+                <span>¡Energía Positiva!</span>
+            </button>
+        </div>
+
+    </main>
+
+    <footer class="relative z-10 w-full max-w-md mx-auto px-6 pb-8">
+        <div class="glass-panel p-2 rounded-2xl shadow-xl flex items-center justify-between text-xs font-semibold">
+            <button id="btn-morning" onclick="setTheme('morning')" class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all bg-white/50 dark:bg-white/20 shadow-sm">
+                <i class="fa-solid fa-sun text-amber-500"></i>
+                <span>Mañana</span>
+            </button>
+            <button id="btn-noon" onclick="setTheme('noon')" class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all opacity-70 hover:opacity-100">
+                <i class="fa-solid fa-sun-plant-wilt text-cyan-500"></i>
+                <span>Mediodía</span>
+            </button>
+            <button id="btn-night" onclick="setTheme('night')" class="flex-1 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all opacity-70 hover:opacity-100">
+                <i class="fa-solid fa-moon text-indigo-400"></i>
+                <span>Noche</span>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // State variables
+        let currentTheme = 'morning';
+        let audioContext = null;
+        let isAudioPlaying = false;
+        let audioNodes = [];
+
+        // Motivational quotes collection
+        const quotes = [
+            { text: "Cada mañana nacemos de nuevo. Lo que hacemos hoy es lo que más importa.", author: "Buda" },
+            { text: "Escribe en tu corazón que cada día es el mejor día del año.", author: "Ralph Waldo Emerson" },
+            { text: "Sonríe en el espejo. Haz eso todas las mañanas y empezarás a ver una gran diferencia en tu vida.", author: "Yoko Ono" },
+            { text: "Hoy es un nuevo día. Incluso si lo hiciste mal ayer, hoy lo puedes hacer bien.", author: "Anónimo" },
+            { text: "El sol es un recordatorio diario de que nosotros también podemos resurgir de la oscuridad.", author: "S. Ajna" },
+            { text: "La manera de empezar es dejar de hablar y comenzar a hacer.", author: "Walt Disney" },
+            { text: "Da la bienvenida a cada mañana con una sonrisa. Mira en el nuevo día como otro regalo especial.", author: "William Arthur Ward" }
+        ];
+
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+
+            hours = hours % 12;
+            hours = hours ? hours : 12; // hour '0' should be '12'
+            const formattedHours = String(hours).padStart(2, '0');
+
+            document.getElementById('digital-clock').textContent = `${formattedHours}:${minutes}:${seconds}`;
+            document.getElementById('ampm').textContent = ampm;
+
+            // Date in spanish format
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('es-ES', options);
+            document.getElementById('date-display').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function generateNewQuote() {
+            const quoteText = document.getElementById('quote-text');
+            const quoteAuthor = document.getElementById('quote-author');
+            
+            quoteText.style.opacity = '0';
+            quoteAuthor.style.opacity = '0';
+
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * quotes.length);
+                const quote = quotes[randomIndex];
+                quoteText.textContent = `"${quote.text}"`;
+                quoteAuthor.textContent = `— ${quote.author}`;
+                quoteText.style.opacity = '1';
+                quoteAuthor.style.opacity = '1';
+            }, 300);
+
+            // Trigger a minor particle pulse
+            createSparkles(window.innerWidth / 2, window.innerHeight / 2, 15);
+        }
+
+        function setTheme(theme) {
+            currentTheme = theme;
+            const body = document.getElementById('app-body');
+            const mainGreeting = document.getElementById('main-greeting');
+            const subGreeting = document.getElementById('sub-greeting');
+            const statusIcon = document.getElementById('status-icon');
+            const orbIcon = document.getElementById('orb-icon');
+            const mainOrb = document.getElementById('main-orb');
+            const sunRays = document.getElementById('sun-rays-svg');
+            const sunGlow = document.getElementById('sun-glow');
+
+            // Reset buttons state
+            ['morning', 'noon', 'night'].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                if (t === theme) {
+                    btn.classList.add('bg-white/50', 'dark:bg-white/20', 'shadow-sm');
+                    btn.classList.remove('opacity-70');
+                } else {
+                    btn.classList.remove('bg-white/50', 'dark:bg-white/20', 'shadow-sm');
+                    btn.classList.add('opacity-70');
+                }
+            });
+
+            // Update body classes
+            body.className = body.className.replace(/theme-\w+/g, '');
+
+            if (theme === 'morning') {
+                body.classList.add('theme-morning');
+                document.documentElement.classList.remove('dark');
+                mainGreeting.textContent = '¡Buenos Días!';
+                subGreeting.textContent = 'Que tengas un día maravilloso y lleno de energía';
+                statusIcon.innerHTML = '<i class="fa-solid fa-sun text-amber-500"></i>';
+                orbIcon.className = 'fa-solid fa-sun text-5xl md:text-6xl text-white';
+                mainOrb.className = 'relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-tr from-amber-300 via-orange-400 to-amber-100 shadow-2xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-500';
+                sunRays.style.opacity = '0.4';
+                sunGlow.className = 'absolute -inset-4 rounded-full bg-gradient-to-r from-amber-400 to-rose-400 blur-2xl opacity-70 animate-pulse-glow transition-all duration-700';
+            } else if (theme === 'noon') {
+                body.classList.add('theme-noon');
+                document.documentElement.classList.remove('dark');
+                mainGreeting.textContent = '¡Buenas Tardes!';
+                subGreeting.textContent = 'Espero que tu día esté siendo muy productivo';
+                statusIcon.innerHTML = '<i class="fa-solid fa-sun-plant-wilt text-cyan-500"></i>';
+                orbIcon.className = 'fa-solid fa-sun text-5xl md:text-6xl text-amber-100';
+                mainOrb.className = 'relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-tr from-yellow-300 via-amber-400 to-sky-300 shadow-2xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-500';
+                sunRays.style.opacity = '0.7';
+                sunGlow.className = 'absolute -inset-4 rounded-full bg-gradient-to-r from-cyan-300 to-yellow-300 blur-2xl opacity-80 animate-pulse-glow transition-all duration-700';
+            } else if (theme === 'night') {
+                body.classList.add('theme-night');
+                document.documentElement.classList.add('dark');
+                mainGreeting.textContent = '¡Buenas Noches!';
+                subGreeting.textContent = 'Hora de descansar y recargar energías para mañana';
+                statusIcon.innerHTML = '<i class="fa-solid fa-moon text-indigo-400"></i>';
+                orbIcon.className = 'fa-solid fa-moon text-5xl md:text-6xl text-indigo-100';
+                mainOrb.className = 'relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-500 to-slate-800 shadow-2xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-500';
+                sunRays.style.opacity = '0.05';
+                sunGlow.className = 'absolute -inset-4 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 blur-2xl opacity-50 animate-pulse-glow transition-all duration-700';
+            }
+        }
+
+        function toggleAudio() {
+            if (isAudioPlaying) {
+                stopAmbientAudio();
+            } else {
+                startAmbientAudio();
+            }
+        }
+
+        function startAmbientAudio() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                // Create warm ambient synth chord (warm pad)
+                const frequencies = [261.63, 329.63, 392.00, 523.25]; // C major chord frequencies
+                audioNodes = [];
+
+                const masterGain = audioContext.createGain();
+                masterGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+                masterGain.connect(audioContext.destination);
+                audioNodes.push(masterGain);
+
+                frequencies.forEach((freq) => {
+                    const osc = audioContext.createOscillator();
+                    const oscGain = audioContext.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+
+                    // Slight LFO for soft warmth
+                    const lfo = audioContext.createOscillator();
+                    lfo.frequency.setValueAtTime(0.2 + Math.random() * 0.1, audioContext.currentTime);
+                    const lfoGain = audioContext.createGain();
+                    lfoGain.gain.setValueAtTime(1.5, audioContext.currentTime);
+                    lfo.connect(osc.frequency);
+                    lfo.start();
+
+                    oscGain.gain.setValueAtTime(0.05, audioContext.currentTime);
+                    osc.connect(oscGain);
+                    oscGain.connect(masterGain);
+
+                    osc.start();
+                    audioNodes.push(osc, lfo);
+                });
+
+                // Bird chirping simulation (procedural audio)
+                const birdInterval = setInterval(() => {
+                    if (!isAudioPlaying) {
+                        clearInterval(birdInterval);
+                        return;
+                    }
+                    if (Math.random() > 0.4) {
+                        playBirdChirp();
+                    }
+                }, 3000);
+
+                isAudioPlaying = true;
+                document.getElementById('sound-icon').className = 'fa-solid fa-volume-high text-emerald-500 animate-pulse';
+                document.getElementById('sound-text').textContent = 'Sonido Activado';
+            } catch (e) {
+                console.error("Web Audio API not supported", e);
+            }
+        }
+
+        function playBirdChirp() {
+            if (!audioContext || audioContext.state !== 'running') return;
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            osc.type = 'sine';
+            const startFreq = 2000 + Math.random() * 1000;
+            osc.frequency.setValueAtTime(startFreq, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(startFreq + 800, audioContext.currentTime + 0.1);
+            osc.frequency.exponentialRampToValueAtTime(startFreq - 400, audioContext.currentTime + 0.2);
+
+            gain.gain.setValueAtTime(0.01, audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.25);
+
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.25);
+        }
+
+        function stopAmbientAudio() {
+            audioNodes.forEach(node => {
+                if (node.stop) node.stop();
+                if (node.disconnect) node.disconnect();
+            });
+            audioNodes = [];
+            isAudioPlaying = false;
+            document.getElementById('sound-icon').className = 'fa-solid fa-volume-xmark text-rose-500';
+            document.getElementById('sound-text').textContent = 'Sonido de la Mañana';
+        }
+
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x || Math.random() * canvas.width;
+                this.y = y || Math.random() * canvas.height;
+                this.radius = Math.random() * 3 + 1;
+                this.color = color || (currentTheme === 'night' ? '#A5B4FC' : '#FDE047');
+                this.vx = (Math.random() - 0.5) * 0.8;
+                this.vy = (Math.random() - 0.5) * 0.8 - 0.2;
+                this.alpha = Math.random() * 0.6 + 0.2;
+                this.decay = Math.random() * 0.005 + 0.002;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+
+                if (this.alpha <= 0) {
+                    this.x = Math.random() * canvas.width;
+                    this.y = canvas.height + 10;
+                    this.alpha = Math.random() * 0.6 + 0.2;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Initialize particles
+        for (let i = 0; i < 40; i++) {
+            particles.push(new Particle());
+        }
+
+        function createSparkles(x, y, count = 20) {
+            const colors = ['#FBBF24', '#F43F5E', '#38BDF8', '#A855F7'];
+            for (let i = 0; i < count; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const p = new Particle(x, y, color);
+                p.vx = (Math.random() - 0.5) * 6;
+                p.vy = (Math.random() - 0.5) * 6;
+                p.radius = Math.random() * 4 + 2;
+                particles.push(p);
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw();
+                if (p.alpha <= 0 && particles.length > 40) {
+                    particles.splice(index, 1);
+                }
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        function triggerSunClick(e) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            createSparkles(x, y, 30);
+
+            // Scale animation
+            const orb = document.getElementById('main-orb');
+            orb.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                orb.style.transform = 'scale(1)';
+            }, 200);
+        }
+
+        function triggerConfetti() {
+            confetti({
+                particleCount: 80,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#f59e0b', '#f43f5e', '#10b981', '#3b82f6', '#8b5cf6']
+            });
+        }
+
+        // Automatically set theme based on current time on load
+        window.onload = function() {
+            const hour = new Date().getHours();
+            if (hour >= 6 && hour < 13) {
+                setTheme('morning');
+            } else if (hour >= 13 && hour < 20) {
+                setTheme('noon');
+            } else {
+                setTheme('night');
+            }
+        }
+    </script>
+</body>
+</html>
